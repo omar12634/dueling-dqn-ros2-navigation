@@ -1,0 +1,27 @@
+[0.402s] Invoking command in '/home/ubuntu/ros2_ws/src/rl_turtlebot': PYTHONPATH=/home/ubuntu/ros2_ws/build/rl_turtlebot/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rl_turtlebot build --build-base /home/ubuntu/ros2_ws/build/rl_turtlebot/build install --record /home/ubuntu/ros2_ws/build/rl_turtlebot/install.log --single-version-externally-managed install_data
+[0.553s] running egg_info
+[0.553s] writing ../../build/rl_turtlebot/rl_turtlebot.egg-info/PKG-INFO
+[0.553s] writing dependency_links to ../../build/rl_turtlebot/rl_turtlebot.egg-info/dependency_links.txt
+[0.553s] writing entry points to ../../build/rl_turtlebot/rl_turtlebot.egg-info/entry_points.txt
+[0.553s] writing requirements to ../../build/rl_turtlebot/rl_turtlebot.egg-info/requires.txt
+[0.553s] writing top-level names to ../../build/rl_turtlebot/rl_turtlebot.egg-info/top_level.txt
+[0.555s] reading manifest file '../../build/rl_turtlebot/rl_turtlebot.egg-info/SOURCES.txt'
+[0.555s] writing manifest file '../../build/rl_turtlebot/rl_turtlebot.egg-info/SOURCES.txt'
+[0.555s] running build
+[0.555s] running build_py
+[0.555s] copying rl_turtlebot/dqn_dueling.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+[0.556s] running install
+[0.556s] running install_lib
+[0.556s] copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/dqn_dueling.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+[0.557s] byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/dqn_dueling.py to dqn_dueling.cpython-310.pyc
+[0.560s] running install_data
+[0.560s] running install_egg_info
+[0.561s] removing '/home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot-0.0.0-py3.10.egg-info' (and everything under it)
+[0.561s] Copying ../../build/rl_turtlebot/rl_turtlebot.egg-info to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot-0.0.0-py3.10.egg-info
+[0.562s] running install_scripts
+[0.575s] Installing dqn_dueling script to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/rl_turtlebot
+[0.575s] Installing dqn_learning_node script to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/rl_turtlebot
+[0.575s] Installing dqn_train script to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/rl_turtlebot
+[0.575s] Installing learning_node script to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/rl_turtlebot
+[0.575s] writing list of installed files to '/home/ubuntu/ros2_ws/build/rl_turtlebot/install.log'
+[0.595s] Invoked command in '/home/ubuntu/ros2_ws/src/rl_turtlebot' returned '0': PYTHONPATH=/home/ubuntu/ros2_ws/build/rl_turtlebot/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rl_turtlebot build --build-base /home/ubuntu/ros2_ws/build/rl_turtlebot/build install --record /home/ubuntu/ros2_ws/build/rl_turtlebot/install.log --single-version-externally-managed install_data

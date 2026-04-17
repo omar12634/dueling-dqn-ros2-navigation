@@ -1,0 +1,51 @@
+running egg_info
+creating ../../build/rl_turtlebot/rl_turtlebot.egg-info
+writing ../../build/rl_turtlebot/rl_turtlebot.egg-info/PKG-INFO
+writing dependency_links to ../../build/rl_turtlebot/rl_turtlebot.egg-info/dependency_links.txt
+writing entry points to ../../build/rl_turtlebot/rl_turtlebot.egg-info/entry_points.txt
+writing requirements to ../../build/rl_turtlebot/rl_turtlebot.egg-info/requires.txt
+writing top-level names to ../../build/rl_turtlebot/rl_turtlebot.egg-info/top_level.txt
+writing manifest file '../../build/rl_turtlebot/rl_turtlebot.egg-info/SOURCES.txt'
+reading manifest file '../../build/rl_turtlebot/rl_turtlebot.egg-info/SOURCES.txt'
+writing manifest file '../../build/rl_turtlebot/rl_turtlebot.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/ubuntu/ros2_ws/build/rl_turtlebot/build
+creating /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib
+creating /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/learning_node.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/dqn_learning_node.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/__init__.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/Qlearning.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/Lidar.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/Control.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+copying rl_turtlebot/DQN.py -> /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot
+running install
+running install_lib
+creating /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/learning_node.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/dqn_learning_node.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/__init__.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/Qlearning.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/Lidar.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/Control.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+copying /home/ubuntu/ros2_ws/build/rl_turtlebot/build/lib/rl_turtlebot/DQN.py -> /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/learning_node.py to learning_node.cpython-310.pyc
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/dqn_learning_node.py to dqn_learning_node.cpython-310.pyc
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/Qlearning.py to Qlearning.cpython-310.pyc
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/Lidar.py to Lidar.cpython-310.pyc
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/Control.py to Control.cpython-310.pyc
+byte-compiling /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/DQN.py to DQN.cpython-310.pyc
+running install_data
+creating /home/ubuntu/ros2_ws/install/rl_turtlebot/share/ament_index
+creating /home/ubuntu/ros2_ws/install/rl_turtlebot/share/ament_index/resource_index
+creating /home/ubuntu/ros2_ws/install/rl_turtlebot/share/ament_index/resource_index/packages
+copying resource/rl_turtlebot -> /home/ubuntu/ros2_ws/install/rl_turtlebot/share/ament_index/resource_index/packages
+copying package.xml -> /home/ubuntu/ros2_ws/install/rl_turtlebot/share/rl_turtlebot
+running install_egg_info
+Copying ../../build/rl_turtlebot/rl_turtlebot.egg-info to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot-0.0.0-py3.10.egg-info
+running install_scripts
+Installing dqn_learning_node script to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/rl_turtlebot
+Installing learning_node script to /home/ubuntu/ros2_ws/install/rl_turtlebot/lib/rl_turtlebot
+writing list of installed files to '/home/ubuntu/ros2_ws/build/rl_turtlebot/install.log'
