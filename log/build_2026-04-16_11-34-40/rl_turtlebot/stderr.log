@@ -1,5 +1,0 @@
-  File "/home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/dqn_dueling.py", line 1
-    code dueling avec anti blocage (recule si il afront un abstacle)
-         ^^^^^^^
-SyntaxError: invalid syntax
-

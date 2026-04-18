@@ -1,5 +1,0 @@
-  File "/home/ubuntu/ros2_ws/install/rl_turtlebot/lib/python3.10/site-packages/rl_turtlebot/dqn_train_node.py", line 549
-    if __name_
-              ^
-SyntaxError: expected ':'
-

@@ -1,6 +1,0 @@
-[console_scripts]
-dqn_dueling = rl_turtlebot.dqn_dueling:main
-dqn_learning_node = rl_turtlebot.dqn_learning_node:main
-dqn_train = rl_turtlebot.dqn_train_node:main
-learning_node = rl_turtlebot.learning_node:main
-
