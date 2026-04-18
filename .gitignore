@@ -1,0 +1,15 @@
+# ROS2
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+
+# Models
+*.pth
+
+# Results
+*.png
+*.csv
