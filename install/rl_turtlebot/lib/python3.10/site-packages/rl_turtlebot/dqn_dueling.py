@@ -3,7 +3,6 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
-from std_srvs.srv import Empty
 import numpy as np
 import random
 import math
@@ -48,6 +47,11 @@ V_ANG          = 0.55
 STUCK_STEPS    = 40
 STUCK_DIST     = 0.01
 
+RETURN_V_LIN   = 0.10
+RETURN_V_ANG   = 0.60
+RETURN_GOAL_R  = 0.25
+RETURN_ANGLE_T = 0.15
+
 STATE_DIM      = 5
 ACTION_DIM     = 3
 
@@ -59,11 +63,6 @@ PLOT_PATH      = 'dueling_training.png'
 
 # ═════════════════════════════════════════════════════════════════════════════
 class DuelingDQN(nn.Module):
-    """
-    Dueling DQN : Q(s,a) = V(s) + A(s,a) - mean(A)
-    V(s)   = valeur de l'état
-    A(s,a) = avantage de chaque action
-    """
     def __init__(self):
         super().__init__()
         self.feature = nn.Sequential(
@@ -117,18 +116,21 @@ class DuelingDQNNode(Node):
         self.cmd = self.create_publisher(Twist, '/cmd_vel', 10)
         self.create_subscription(LaserScan, '/scan', self._on_scan, 10)
         self.create_subscription(Odometry,  '/odom', self._on_odom, 10)
-        self.reset_client = self.create_client(
-            Empty, '/gazebo/reset_simulation'
-        )
 
-        self.scan          = None
-        self.pos           = None
-        self.yaw           = 0.0
-        self.prev_dist     = None
-        self.prev_pos      = None
-        self._ready        = False
-        self._resetting    = False
-        self._stuck_count  = 0
+        self.scan      = None
+        self.pos       = None
+        self.yaw       = 0.0
+        self.prev_dist = None
+        self.prev_pos  = None
+
+        # Position initiale fixe — sauvegardée une seule fois
+        # au tout premier épisode
+        self.init_pos  = None
+        self.init_yaw  = 0.0
+
+        self._ready       = False
+        self._returning   = False
+        self._stuck_count = 0
 
         self.online = DuelingDQN()
         self.target = DuelingDQN()
@@ -153,8 +155,9 @@ class DuelingDQNNode(Node):
         signal.signal(signal.SIGTERM, self._on_shutdown)
 
         self.create_timer(0.10, self._loop)
-        self.get_logger().info('=== Dueling DQN Nav — démarrage ===')
+        self.get_logger().info('=== Dueling DQN — navigation continue ===')
 
+    # ─────────────────────────────────────────────────────────────────────────
     def _on_scan(self, msg):
         r = np.array(msg.ranges, dtype=np.float32)
         self.scan = np.where(np.isfinite(r), r, float(msg.range_max))
@@ -168,20 +171,49 @@ class DuelingDQNNode(Node):
             1.0 - 2.0*(q.y*q.y + q.z*q.z)
         )
 
-    def _reset_world(self):
-        self._stop()
-        self._resetting = True
-        if self.reset_client.service_is_ready():
-            self.reset_client.call_async(Empty.Request())
-        time.sleep(1.5)
-        self.scan         = None
-        self.pos          = None
-        self.prev_dist    = None
-        self.prev_pos     = None
-        self._ready       = False
-        self._resetting   = False
-        self._stuck_count = 0
+    def _stop(self):
+        for _ in range(5):
+            self.cmd.publish(Twist())
 
+    # ─────────────────────────────────────────────────────────────────────────
+    #  RETOUR AUTONOME — après GOAL uniquement
+    #  Contrôleur proportionnel simple : angle → avancer
+    # ─────────────────────────────────────────────────────────────────────────
+    def _return_to_start(self):
+        if self.pos is None or self.init_pos is None:
+            return False
+
+        dx   = self.init_pos[0] - self.pos[0]
+        dy   = self.init_pos[1] - self.pos[1]
+        dist = float(np.hypot(dx, dy))
+
+        if dist < RETURN_GOAL_R:
+            self._stop()
+            self.get_logger().info(
+                f'Retour terminé (dist={dist:.2f}m) → nouvel épisode'
+            )
+            return True
+
+        angle_to_start = math.atan2(dy, dx) - self.yaw
+        angle_to_start = (
+            (angle_to_start + math.pi) % (2 * math.pi) - math.pi
+        )
+
+        cmd = Twist()
+        if abs(angle_to_start) > RETURN_ANGLE_T:
+            cmd.linear.x  = 0.04
+            cmd.angular.z = (
+                RETURN_V_ANG if angle_to_start > 0 else -RETURN_V_ANG
+            )
+        else:
+            speed = min(RETURN_V_LIN, max(0.04, dist * 0.4))
+            cmd.linear.x  = float(speed)
+            cmd.angular.z = float(angle_to_start * 0.4)
+
+        self.cmd.publish(cmd)
+        return False
+
+    # ─────────────────────────────────────────────────────────────────────────
     def _read_front(self):
         if self.scan is None:
             return 3.0, 3.0, 3.0
@@ -215,7 +247,7 @@ class DuelingDQNNode(Node):
         dx, dy = GOAL - self.pos
         dist   = float(np.hypot(dx, dy))
         angle  = float(math.atan2(dy, dx) - self.yaw)
-        angle  = (angle + math.pi) % (2*math.pi) - math.pi
+        angle  = (angle + math.pi) % (2 * math.pi) - math.pi
         return np.array([
             min(fl,    3.0) / 3.0,
             min(front, 3.0) / 3.0,
@@ -224,6 +256,11 @@ class DuelingDQNNode(Node):
             angle / math.pi,
         ], dtype=np.float32)
 
+    # ─────────────────────────────────────────────────────────────────────────
+    #  ACTION
+    #  Règle unique : détecter obstacle devant → tourner
+    #  Voie libre → DQN vers le goal
+    # ─────────────────────────────────────────────────────────────────────────
     def _act_and_publish(self, s) -> int:
         fl    = s[0] * 3.0
         front = s[1] * 3.0
@@ -231,10 +268,7 @@ class DuelingDQNNode(Node):
         angle = s[4] * math.pi
         v_lin = self._get_speed(front)
 
-        if front < DIST_STOP:
-            self.get_logger().warn(f'Trop proche ! front={front:.2f}m')
-            return -1
-
+        # Obstacle devant → tourner vers le côté le plus libre
         if front < DIST_ALERT:
             if fl >= fr:
                 action, ang = 0, +V_ANG
@@ -246,6 +280,7 @@ class DuelingDQNNode(Node):
             self.cmd.publish(cmd)
             return action
 
+        # Obstacle avant-gauche → droite
         if fl < DIST_ALERT:
             cmd = Twist()
             cmd.linear.x  = float(v_lin)
@@ -253,6 +288,7 @@ class DuelingDQNNode(Node):
             self.cmd.publish(cmd)
             return 2
 
+        # Obstacle avant-droite → gauche
         if fr < DIST_ALERT:
             cmd = Twist()
             cmd.linear.x  = float(v_lin)
@@ -260,6 +296,7 @@ class DuelingDQNNode(Node):
             self.cmd.publish(cmd)
             return 0
 
+        # Voie libre → DQN ou exploration
         if random.random() >= self.eps:
             with torch.no_grad():
                 t      = torch.tensor(s, dtype=torch.float32).unsqueeze(0)
@@ -279,17 +316,11 @@ class DuelingDQNNode(Node):
         self.cmd.publish(cmd)
         return action
 
-    def _stop(self):
-        for _ in range(5):
-            self.cmd.publish(Twist())
-
     def _compute_reward(self, s):
         front = s[1] * 3.0
         dist  = s[3] * 10.0
         angle = s[4] * math.pi
 
-        if front < DIST_STOP:
-            return -200.0, True
         if dist < GOAL_R:
             return 500.0, True
 
@@ -329,9 +360,12 @@ class DuelingDQNNode(Node):
         else:
             self._stuck_count = max(0, self._stuck_count - 1)
         self.prev_pos = self.pos.copy()
+
+        # Robot immobile trop longtemps → fin d'épisode
+        # mais PAS de reset : l'épisode suivant repart de la position actuelle
         if self._stuck_count >= STUCK_STEPS:
             self.get_logger().warn(
-                f'Immobile {self._stuck_count} steps → reset auto'
+                f'Immobile {self._stuck_count} steps → fin épisode'
             )
             self._end_episode(False, 'BLOQUE')
             return True
@@ -352,6 +386,13 @@ class DuelingDQNNode(Node):
         nn.utils.clip_grad_norm_(self.online.parameters(), 1.0)
         self.opt.step()
 
+    # ─────────────────────────────────────────────────────────────────────────
+    #  FIN D'ÉPISODE
+    #
+    #  GOAL  → arrêt 4s → retour autonome vers init_pos → nouvel épisode
+    #  ECHEC → épisode suivant repart immédiatement depuis position actuelle
+    #          PAS DE RESET GAZEBO
+    # ─────────────────────────────────────────────────────────────────────────
     def _end_episode(self, success, reason=''):
         self._stuck_count = 0
         self.ep  += 1
@@ -388,14 +429,28 @@ class DuelingDQNNode(Node):
         self.prev_dist = None
         self.prev_pos  = None
 
-        if success:
-            self._stop()
-            self.get_logger().info(
-                '*** GOAL — arrêt 3s puis retour position initiale ***'
-            )
-            time.sleep(3.0)
+        self._stop()
 
-        self._reset_world()
+        if success:
+            # GOAL → arrêt 4s → retour autonome
+            self.get_logger().info(
+                '*** GOAL — arrêt 4 secondes ***'
+            )
+            time.sleep(4.0)
+            self.get_logger().info(
+                f'Retour vers position initiale '
+                f'({self.init_pos[0]:.2f}, {self.init_pos[1]:.2f})'
+            )
+            self._returning = True
+            self._ready     = False
+        else:
+            # ECHEC → continuer depuis position actuelle
+            # Pas de reset, pas de retour
+            # L'épisode suivant démarre depuis où le robot est
+            self.get_logger().info(
+                f'Echec ({reason}) → reprise depuis position actuelle'
+            )
+            self._ready = False   # force réinitialisation du prochain épisode
 
         if self.ep >= MAX_EPISODES:
             self._stop()
@@ -405,55 +460,73 @@ class DuelingDQNNode(Node):
             self.get_logger().info('=== DUELING DQN TERMINE ===')
             rclpy.shutdown()
 
+    # ─────────────────────────────────────────────────────────────────────────
+    #  BOUCLE PRINCIPALE
+    # ─────────────────────────────────────────────────────────────────────────
     def _loop(self):
-        if self._resetting:
+        if self.pos is None or self.scan is None:
             return
 
+        # ── MODE RETOUR AUTONOME (uniquement après GOAL) ──────────────────
+        if self._returning:
+            arrived = self._return_to_start()
+            if arrived:
+                self._returning   = False
+                self._ready       = False
+                self._stuck_count = 0
+                time.sleep(0.5)
+            return
+
+        # ── INITIALISATION ÉPISODE ────────────────────────────────────────
+        if not self._ready:
+            dist_now = float(np.linalg.norm(GOAL - self.pos))
+            _, front, _ = self._read_front()
+
+            # Sauvegarder init_pos une seule fois au tout premier épisode
+            if self.init_pos is None:
+                self.init_pos = self.pos.copy()
+                self.init_yaw = self.yaw
+                self.get_logger().info(
+                    f'Position initiale enregistrée : '
+                    f'({self.init_pos[0]:.2f}, {self.init_pos[1]:.2f})'
+                )
+
+            self._ready       = True
+            self.prev_dist    = dist_now
+            self.prev_pos     = self.pos.copy()
+            self._stuck_count = 0
+
+            self.get_logger().info(
+                f'Ep {self.ep+1} démarré | '
+                f'pos=({self.pos[0]:.2f},{self.pos[1]:.2f}) | '
+                f'dist_goal={dist_now:.2f}m | '
+                f'front={front:.2f}m | '
+                f'eps={self.eps:.3f}'
+            )
+            return
+
+        # ── NAVIGATION VERS LE GOAL ───────────────────────────────────────
         s = self._get_state()
         if s is None:
             return
 
-        if not self._ready:
-            if self.pos is None:
-                return
-            dist_now = float(np.linalg.norm(GOAL - self.pos))
-            _, front, _ = self._read_front()
-
-            if dist_now < GOAL_R + 0.3:
-                self.get_logger().warn(
-                    f'Spawn proche goal ({dist_now:.2f}m) → reset'
-                )
-                self._reset_world()
-                return
-
-            self._ready    = True
-            self.prev_dist = dist_now
-            self.prev_pos  = self.pos.copy()
+        # Vérification goal
+        dist_now = float(np.linalg.norm(GOAL - self.pos))
+        if dist_now < GOAL_R and self.steps >= 3:
             self.get_logger().info(
-                f'Ep {self.ep+1} démarré | '
-                f'dist={dist_now:.2f}m | '
-                f'front={front:.2f}m | '
-                f'eps={self.eps:.3f}'
+                f'*** GOAL ! dist={dist_now:.2f}m steps={self.steps} ***'
             )
+            self._stop()
+            self.total_r += 500.0
+            self._end_episode(True, 'GOAL')
+            return
 
-        if self.pos is not None:
-            dist_now = float(np.linalg.norm(GOAL - self.pos))
-            if dist_now < GOAL_R and self.steps >= 3:
-                self.get_logger().info(
-                    f'*** GOAL ! dist={dist_now:.2f}m steps={self.steps} ***'
-                )
-                self._stop()
-                self.total_r += 500.0
-                self._end_episode(True, 'GOAL')
-                return
-
+        # Anti-blocage
         if self._check_and_handle_stuck():
             return
 
+        # Action — toujours avancer, jamais bloquer
         action = self._act_and_publish(s)
-        if action == -1:
-            self._end_episode(False, 'TROP PROCHE')
-            return
 
         reward, done = self._compute_reward(s)
         ns = self._get_state()
@@ -467,12 +540,13 @@ class DuelingDQNNode(Node):
 
         if done:
             ok = float(np.linalg.norm(GOAL - self.pos)) < GOAL_R
-            self._end_episode(ok, 'GOAL' if ok else 'TROP PROCHE')
+            self._end_episode(ok, 'GOAL' if ok else 'ECHEC')
             return
 
         if self.steps >= MAX_STEPS:
             self._end_episode(False, 'TIMEOUT')
 
+    # ─────────────────────────────────────────────────────────────────────────
     def _save_plots(self):
         if not self.hist_r:
             return
@@ -495,7 +569,7 @@ class DuelingDQNNode(Node):
                      color='blue', linewidth=2,
                      label=f'Moyenne {w} ep')
         axes[0].axhline(y=0, color='gray', linestyle='--', linewidth=0.5)
-        axes[0].set_title('Reward total par épisode')
+        axes[0].set_title('Reward par épisode')
         axes[0].set_xlabel('Épisode')
         axes[0].set_ylabel('Reward')
         axes[0].legend()
@@ -506,8 +580,8 @@ class DuelingDQNNode(Node):
         axes[1].fill_between(episodes, self.hist_e,
                              alpha=0.2, color='orange')
         axes[1].axhline(y=EPS_MIN, color='red', linestyle='--',
-                        linewidth=1, label=f'EPS_MIN={EPS_MIN}')
-        axes[1].set_title('Décroissance Epsilon')
+                        linewidth=1, label=f'Min={EPS_MIN}')
+        axes[1].set_title('Epsilon')
         axes[1].set_xlabel('Épisode')
         axes[1].set_ylabel('Epsilon')
         axes[1].set_ylim(0, 1.1)
@@ -516,7 +590,7 @@ class DuelingDQNNode(Node):
 
         axes[2].plot(episodes, self.hist_rate,
                      color='green', linewidth=2,
-                     label=f'Taux succès ({w} ep)')
+                     label=f'Taux ({w} ep)')
         axes[2].fill_between(episodes, self.hist_rate,
                              alpha=0.2, color='green')
         axes[2].axhline(y=0.8, color='red', linestyle='--',
@@ -567,7 +641,7 @@ class DuelingDQNNode(Node):
                         round(self.hist_rate[i], 4),
                     ])
         except Exception as e:
-            self.get_logger().error(f'CSV erreur: {e}')
+            self.get_logger().error(f'CSV: {e}')
 
     def _save_model(self, path=MODEL_PATH, reason='auto'):
         try:
@@ -589,7 +663,7 @@ class DuelingDQNNode(Node):
             }, path)
             self.get_logger().info(f'[SAVE {reason}] ep={self.ep}')
         except Exception as e:
-            self.get_logger().error(f'Save erreur: {e}')
+            self.get_logger().error(f'Save: {e}')
 
     def _load_model(self):
         path = MODEL_PATH if os.path.exists(MODEL_PATH) else (
@@ -614,10 +688,9 @@ class DuelingDQNNode(Node):
                 f'[LOAD] ep={self.ep} eps={self.eps:.3f}'
             )
         except Exception as e:
-            self.get_logger().error(f'Load erreur: {e}')
+            self.get_logger().error(f'Load: {e}')
 
     def _on_shutdown(self, signum, frame):
-        self.get_logger().info('Arrêt — sauvegarde...')
         self._stop()
         self._save_model(reason='CTRL+C')
         self._save_csv()
